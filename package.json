@@ -1,0 +1,8 @@
+{
+  "name": "stem-tutor-site",
+  "version": "1.0.0",
+  "description": "Physics, engineering and math AI tutor using the OpenAI API",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
