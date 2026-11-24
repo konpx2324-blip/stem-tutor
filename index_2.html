@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEM Tutor: Physics, Engineering & Math</title>
+<style>
+:root{--bg:#f6f7f9;--surface:#fff;--text:#16181d;--muted:#667085;--accent:#2563eb;--accent-text:#fff;--border:#e1e4ea;--user:#e8efff}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--surface:#181b21;--text:#e8eaee;--muted:#98a2b3;--accent:#6b9bff;--accent-text:#0b1020;--border:#2a2f38;--user:#1d2a4a}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+header,#chips,#log,#bar{max-width:820px;width:100%;margin:0 auto;padding-left:20px;padding-right:20px}
+header{padding-top:16px;padding-bottom:8px}
+h1{font-size:1.25rem;margin:0}
+header p{margin:2px 0 0;color:var(--muted);font-size:.9rem}
+#chips{display:flex;gap:8px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.chip{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:999px;padding:6px 12px;font-size:.85rem;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+#log{flex:1;overflow-y:auto;padding-top:8px;padding-bottom:8px}
+.msg{margin:10px 0;padding:10px 14px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:92%}
+.user{background:var(--user);margin-left:auto}
+.ai{background:var(--surface);border:1px solid var(--border)}
+.err{color:#d92d20}
+#bar{display:flex;gap:8px;padding-top:10px;padding-bottom:14px}
+textarea{flex:1;resize:none;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:12px;padding:10px 12px;font:inherit;min-height:46px;max-height:140px}
+#send{background:var(--accent);color:var(--accent-text);border:0;border-radius:12px;padding:0 18px;font-weight:600;cursor:pointer}
+#send:disabled{opacity:.5;cursor:default}
+</style>
+</head>
+<body>
+<header>
+  <h1>STEM Tutor</h1>
+  <p>Ask about physics, engineering and mathematics. I’ll explain step by step.</p>
+</header>
+<div id="chips"></div>
+<div id="log" aria-live="polite"></div>
+<div id="bar">
+  <textarea id="q" rows="1" placeholder="Ask a question…"></textarea>
+  <button id="send" type="button">Send</button>
+</div>
+<script>
+var SUGGEST = ["Explain Newton’s laws with an example","How do I solve a second-order ODE?","How does a beam bend under load?","What is the Fourier transform?"];
+var chatHistory = [], busy = false;
+var log = document.getElementById("log"), q = document.getElementById("q"), send = document.getElementById("send");
+
+function add(cls, text){
+  var d = document.createElement("div");
+  d.className = "msg " + cls; d.textContent = text;
+  log.appendChild(d); log.scrollTop = log.scrollHeight; return d;
+}
+SUGGEST.forEach(function(s){
+  var b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.textContent = s;
+  b.onclick = function(){ q.value = s; ask(); };
+  document.getElementById("chips").appendChild(b);
+});
+
+async function ask(){
+  var text = q.value.trim();
+  if (!text || busy) return;
+  busy = true; send.disabled = true; q.value = "";
+  document.getElementById("chips").style.display = "none";
+  add("user", text);
+  chatHistory.push({role:"user", content:text});
+  var out = add("ai", "Thinking…");
+  try {
+    var r = await fetch("/api/chat", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({messages: chatHistory})});
+    var data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Request failed");
+    out.textContent = data.reply;
+    chatHistory.push({role:"assistant", content:data.reply});
+  } catch(e){
+    chatHistory.pop();
+    out.className = "msg ai err";
+    out.textContent = "Error: " + e.message;
+  } finally { busy = false; send.disabled = false; q.focus(); }
+}
+send.onclick = ask;
+q.addEventListener("keydown", function(e){ if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); ask(); } });
+</script>
+</body>
+</html>
